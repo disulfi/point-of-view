@@ -12,6 +12,8 @@ const basename = require('path').basename
 const HLRU = require('hashlru')
 const supportedEngines = ['ejs', 'nunjucks', 'pug', 'handlebars', 'marko', 'mustache', 'art-template', 'twig', 'liquid', 'dot', 'eta']
 
+const performance = require('perf_hooks').performance
+
 function fastifyView (fastify, opts, next) {
   if (!opts.engine) {
     next(new Error('Missing engine'))
@@ -192,6 +194,8 @@ function fastifyView (fastify, opts, next) {
         }
         options.filename = join(templatesDir, page)
         compiledPage = engine.compile(html, options)
+        let finish = performance.now()
+        that.renderTime = finish - that.renderStart
       } catch (error) {
         that.send(error)
         return
@@ -270,6 +274,8 @@ function fastifyView (fastify, opts, next) {
       this.send(new Error('Missing page'))
       return
     }
+    let start = performance.now()
+    this.renderStart = start
     data = Object.assign({}, defaultCtx, this.locals, data)
     // append view extension
     page = getPage(page, type)
@@ -283,6 +289,8 @@ function fastifyView (fastify, opts, next) {
         if (!this.getHeader('content-type')) {
           this.header('Content-Type', 'text/html; charset=' + charset)
         }
+        let finish = performance.now()
+        this.renderTime = finish - start
         this.send(toHtml(data))
         return
       }
